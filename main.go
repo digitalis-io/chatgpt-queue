@@ -61,19 +61,16 @@ func consumeFromRabbitMQ() {
 	for msg := range msgs {
 		mu.Lock()
 
-		// Unmarshal JSON body
-		var payload struct {
-			Key     string `json:"key"`
-			Message string `json:"message"`
-		}
+		// Unmarshal JSON body as ChatCompletionRequest
+		var payload ChatCompletionRequest
 		if err := json.Unmarshal(msg.Body, &payload); err != nil {
 			log.Printf("Failed to unmarshal message body: %v", err)
 			mu.Unlock()
 			continue
 		}
 
-		log.Printf("Received message: key=%s, message=%s", payload.Key, payload.Message)
-		processMessage(payload.Key, payload.Message)
+		log.Printf("Received message: user=%s, uid=%s, model=%s", payload.Username, payload.UID, payload.Model)
+		processMessage(payload)
 		mu.Unlock()
 	}
 }
@@ -124,7 +121,7 @@ func publishResponseToRabbitMQ(key string, content string) {
 	}
 }
 
-func processMessage(key string, message string) {
+func processMessage(req ChatCompletionRequest) {
 	token := getEnvOrDefault("OPENAI_API_KEY", "dummy-token")
 	config := openai.DefaultConfig(token)
 
@@ -133,38 +130,32 @@ func processMessage(key string, message string) {
 
 	ctx := context.Background()
 
-	req := openai.ChatCompletionRequest{
-		Model:     getEnvOrDefault("OPENAI_MODEL", "deepseek-r1:8b"),
-		MaxTokens: 2000,
-		Messages: []openai.ChatCompletionMessage{
-			{
-				Role:    openai.ChatMessageRoleUser,
-				Content: message,
-			},
-		},
-		Stream: true,
+	chatReq := openai.ChatCompletionRequest{
+		Model:     req.Model,
+		MaxTokens: req.MaxTokens,
+		Messages:  req.Messages,
+		Stream:    req.Stream,
 	}
-	stream, err := c.CreateChatCompletionStream(ctx, req)
+	stream, err := c.CreateChatCompletionStream(ctx, chatReq)
 	if err != nil {
 		fmt.Printf("ChatCompletionStream error: %v\n", err)
 		return
 	}
 	defer stream.Close()
 
-	log.Debugf("Processing message: key=%s, message=%s", key, message)
 	for {
 		response, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
-			log.Println("\nStream finished")
+			fmt.Println("\nStream finished")
 			return
 		}
 
 		if err != nil {
-			log.Printf("\nStream error: %v\n", err)
+			fmt.Printf("\nStream error: %v\n", err)
 			return
 		}
 
-		publishResponseToRabbitMQ(key, response.Choices[0].Delta.Content)
+		publishResponseToRabbitMQ(req.UID, response.Choices[0].Delta.Content)
 	}
 }
 
@@ -181,5 +172,7 @@ func init() {
 }
 
 func main() {
+	// Start the REST API in a goroutine if you want both REST and queue worker
+	go StartRestAPI()
 	consumeFromRabbitMQ()
 }

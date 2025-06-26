@@ -3,7 +3,7 @@ APP_NAME=chatgpt-queue
 .PHONY: build run docker-build docker-run
 
 build:
-	go build -o $(APP_NAME) main.go
+	go build -o $(APP_NAME) main.go restapi.go types.go
 
 run: build
 	./$(APP_NAME)

@@ -109,6 +109,47 @@ export OPENAI_URL="http://localhost:11434/v1"
 export OPENAI_MODEL="llama2"
 ```
 
+## REST API Usage
+
+The application also exposes a REST API compatible with the OpenAI Chat Completions endpoint, and a streaming endpoint for responses.
+
+### 1. Submit a Chat Query
+
+Send a POST request to `/v1/chat/completions` with a JSON body. You may include `username` (optional) and `uid` (optional, will be generated if omitted):
+
+```bash
+curl --location 'http://localhost:8080/v1/chat/completions' \
+  --header 'Content-Type: application/json' \
+  --data '{
+    "model": "gpt-4o",
+    "messages": [
+      { "role": "user", "content": "Tell me a short story about a brave knight." }
+    ],
+    "stream": true,
+    "username": "alice"
+  }'
+```
+
+The response will include the UID assigned to the request. Use this UID to retrieve the response.
+
+### 2. Stream the Response
+
+To receive the streamed response, connect to `/v1/chat/response?uid=<uid>` using Server-Sent Events (SSE):
+
+```bash
+curl -N 'http://localhost:8080/v1/chat/response?uid=<uid>'
+```
+
+Replace `<uid>` with the UID returned from the previous step. Each message chunk will be streamed as an SSE event.
+
+### 3. Health Check
+
+A simple health check endpoint is available:
+
+```bash
+curl http://localhost:8080/ping
+```
+
 ## Extending
 
 - You can run multiple workers for scalability.
