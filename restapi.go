@@ -1,19 +1,3 @@
-/*
-curl --location 'https://api.openai.com/v1/chat/completions' \
---header 'Content-Type: application/json' \
---header 'Authorization: Bearer YOUR_API_KEY' \
-
-	--data '{
-	    "model": "gpt-4o",
-	    "messages": [
-	      {
-	        "role": "user",
-	        "content": "Tell me a short story about a brave knight."
-	      }
-	    ],
-	    "stream": true
-	}
-*/
 package main
 
 import (
