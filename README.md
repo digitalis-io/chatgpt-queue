@@ -72,8 +72,17 @@ import pika, json, uuid
 
 connection = pika.BlockingConnection(pika.ConnectionParameters('localhost'))
 channel = connection.channel()
-key = str(uuid.uuid4())
-message = {"key": key, "message": "Tell me a joke."}
+
+uid = str(uuid.uuid4())
+message = {
+    "model": "gpt-4o",
+    "messages": [
+        {"role": "user", "content": "Tell me a joke."}
+    ],
+    "stream": True,
+    "username": "alice",
+    "uid": uid
+}
 channel.basic_publish(
     exchange='',
     routing_key='default-queue',
@@ -84,14 +93,14 @@ print("Sent:", message)
 
 ### 3. Receive the Response
 
-Consume from the queue named `response_{key}` (replace `{key}` with the UUID you used):
+Consume from the queue named `response_{uid}` (replace `{uid}` with the UID you used):
 
 ```python
 def callback(ch, method, properties, body):
     print("Response:", body.decode())
 
 channel.basic_consume(
-    queue=f'response_{key}',
+    queue=f'response_{uid}',
     on_message_callback=callback,
     auto_ack=True
 )
