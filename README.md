@@ -1,3 +1,7 @@
+<div align="center">
+  <img src="logo.png" alt="ChatGPT Queue Worker Logo" />
+</div>
+
 # ChatGPT Queue Worker
 
 This application acts as a bridge between RabbitMQ and any Large Language Model (LLM) server that supports the ChatGPT-compatible API (such as OpenAI, Ollama, DeepSeek, etc). It allows you to submit chat queries to a RabbitMQ queue and receive the responses via another queue, enabling asynchronous, decoupled, and scalable LLM-powered workflows.
