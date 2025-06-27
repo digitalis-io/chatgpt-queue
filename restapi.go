@@ -80,16 +80,6 @@ func chatCompletionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	/* Waiting for the answer and stream it out */
-	w.Header().Set("Content-Type", "text/event-stream")
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("Connection", "keep-alive")
-	flusher, ok := w.(http.Flusher)
-	if !ok {
-		http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
-		return
-	}
-
 	responseQueueName := fmt.Sprintf("response_%s", req.UID)
 
 	/* Reconnect as consumer */
@@ -146,9 +136,47 @@ func chatCompletionsHandler(w http.ResponseWriter, r *http.Request) {
 	defer chConsumer.Close()
 
 	// Stream messages as they arrive
-	for msg := range msgs {
-		fmt.Fprintf(w, "data: %s\n\n", msg.Body)
-		flusher.Flush()
+	if req.Stream {
+		w.Header().Set("Content-Type", "text/event-stream")
+		w.Header().Set("Cache-Control", "no-cache")
+		w.Header().Set("Connection", "keep-alive")
+		flusher, ok := w.(http.Flusher)
+		if !ok {
+			http.Error(w, "Streaming unsupported!", http.StatusInternalServerError)
+			return
+		}
+
+		for msg := range msgs {
+			chunk := map[string]interface{}{
+				"id":     req.UID,
+				"object": "chat.completion.chunk",
+				"choices": []map[string]interface{}{
+					{"delta": map[string]string{"content": string(msg.Body)}, "index": 0, "finish_reason": nil},
+				},
+			}
+			b, _ := json.Marshal(chunk)
+			fmt.Fprintf(w, "data: %s\n\n", b)
+			flusher.Flush()
+		}
+	} else {
+		// Collect all messages from the response queue and build a compatible OpenAI response
+		var completions []string
+		for msg := range msgs {
+			completions = append(completions, string(msg.Body))
+			// Optionally, break on some end-of-stream marker or after a single message
+			break // Remove this break if you want to collect multiple messages
+		}
+		// Build a minimal OpenAI-compatible response
+		resp := map[string]interface{}{
+			"id":     req.UID,
+			"object": "chat.completion",
+			"choices": []map[string]interface{}{
+				{"message": map[string]string{"role": "assistant", "content": completions[0]}},
+			},
+		}
+		w.Header().Set("Content-Type", "application/json")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode(resp)
 	}
 }
 
