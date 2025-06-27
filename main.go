@@ -138,7 +138,7 @@ func processMessage(req ChatCompletionRequest) {
 	}
 	stream, err := c.CreateChatCompletionStream(ctx, chatReq)
 	if err != nil {
-		fmt.Printf("ChatCompletionStream error: %v\n", err)
+		log.Errorf("ChatCompletionStream error: %v\n", err)
 		return
 	}
 	defer stream.Close()
@@ -146,12 +146,12 @@ func processMessage(req ChatCompletionRequest) {
 	for {
 		response, err := stream.Recv()
 		if errors.Is(err, io.EOF) {
-			fmt.Println("\nStream finished")
+			log.Info("\nStream finished")
 			return
 		}
 
 		if err != nil {
-			fmt.Printf("\nStream error: %v\n", err)
+			log.Errorf("\nStream error: %v\n", err)
 			return
 		}
 

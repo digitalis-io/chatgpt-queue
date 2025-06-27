@@ -8,7 +8,7 @@ This application acts as a bridge between RabbitMQ and any Large Language Model 
 
 ## How It Works
 
-1. **Submit a Query:**  
+1. **Submit a Query:**
    - A client sends a chat message to a RabbitMQ queue (default: `default-queue`).
    - The message must be a JSON object with two fields:
      - `key`: a unique identifier (UUID) for the request.
@@ -22,27 +22,27 @@ This application acts as a bridge between RabbitMQ and any Large Language Model 
    }
    ```
 
-2. **Processing the Query:**  
+2. **Processing the Query:**
    - The worker consumes messages from the input queue.
    - For each message, it sends the prompt to the configured LLM server using the ChatGPT-compatible API.
    - The worker streams or collects the response.
 
-3. **Returning the Response:**  
+3. **Returning the Response:**
    - The worker publishes the LLM's response to a dedicated RabbitMQ queue named `response_{key}` (e.g., `response_123e4567-e89b-12d3-a456-426614174000`).
    - Clients can consume from this queue to receive the answer.
 
 ## Features
 
-- **Supports Any ChatGPT-Compatible API:**  
+- **Supports Any ChatGPT-Compatible API:**
   Configure the base URL and model via environment variables to use OpenAI, Ollama, DeepSeek, or any compatible server.
 
-- **Asynchronous and Decoupled:**  
+- **Asynchronous and Decoupled:**
   Clients and workers communicate only via RabbitMQ, allowing for scalable and distributed deployments.
 
-- **Streaming Support:**  
+- **Streaming Support:**
   The worker streams responses from the LLM and forwards them to the response queue in real time.
 
-- **Configurable:**  
+- **Configurable:**
   All connection details (RabbitMQ, LLM server, model, etc.) are set via environment variables.
 
 ## Environment Variables
@@ -68,7 +68,7 @@ The worker will listen for chat requests on the configured RabbitMQ queue.
 
 ### 2. Submit a Chat Request
 
-You can use any RabbitMQ client to publish a message to the input queue.  
+You can use any RabbitMQ client to publish a message to the input queue.
 Example using Python (pika):
 
 ```python
@@ -174,5 +174,5 @@ Apache 2.0
 
 ---
 
-**Questions?**  
+**Questions?**
 Open an issue or PR!
