@@ -30,7 +30,7 @@ func getEnvOrDefault(key, defaultValue string) string {
 
 func consumeFromRabbitMQ() {
 	rabbitURL := getEnvOrDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	queueName := getEnvOrDefault("RABBITMQ_QUEUE", "default-queue")
+	queueName := getEnvOrDefault("RABBITMQ_QUEUE", "chat_incoming")
 
 	conn, err := amqp091.Dial(rabbitURL)
 	if err != nil {
@@ -77,7 +77,7 @@ func consumeFromRabbitMQ() {
 
 func publishResponseToRabbitMQ(key string, content string) {
 	rabbitURL := getEnvOrDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/")
-	responseQueue := fmt.Sprintf("response_%s", key)
+	responseQueue := fmt.Sprintf("%s%s", getEnvOrDefault("RESPONSE_QUEUE_PREFIX", "response_"), key)
 
 	conn, err := amqp091.Dial(rabbitURL)
 	if err != nil {

@@ -25,7 +25,7 @@ func main() {
 		log.Fatalf("Usage: %s <uid>", os.Args[0])
 	}
 	uuid := os.Args[1]
-	queueName := fmt.Sprintf("response_%s", uuid)
+	queueName := fmt.Sprintf("%s%s", getEnvOrDefault("RESPONSE_QUEUE_PREFIX", "response_"), uuid)
 
 	conn, err := amqp091.Dial(getEnvOrDefault("RABBITMQ_URL", "amqp://guest:guest@localhost:5672/"))
 	if err != nil {

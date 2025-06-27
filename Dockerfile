@@ -23,7 +23,7 @@ COPY --from=builder /app/chatgpt-queue .
 
 # Set environment variables as needed (can be overridden at runtime)
 ENV RABBITMQ_URL=amqp://guest:guest@localhost:5672/
-ENV RABBITMQ_QUEUE=default-queue
+ENV RABBITMQ_QUEUE=chat_incoming
 ENV OPENAI_API_KEY=dummy-token
 ENV OPENAI_URL=http://localhost:11434/v1
 ENV OPENAI_MODEL=deepseek-r1:8b

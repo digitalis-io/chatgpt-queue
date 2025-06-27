@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"net/http"
+	"strconv"
 	"time"
 
 	"github.com/google/uuid"
@@ -29,7 +30,7 @@ func chatCompletionsHandler(w http.ResponseWriter, r *http.Request) {
 		req.UID = uuid.NewString()
 	}
 
-	queueName := getEnvOrDefault("RABBITMQ_QUEUE", "default-queue")
+	queueName := getEnvOrDefault("RABBITMQ_QUEUE", "chat_incoming")
 	body, err := json.Marshal(req)
 	if err != nil {
 		http.Error(w, "Failed to marshal request", http.StatusInternalServerError)
@@ -80,7 +81,10 @@ func chatCompletionsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	responseQueueName := fmt.Sprintf("response_%s", req.UID)
+	/* Give it a second, we may have a reply ready */
+	time.Sleep(2 * time.Second)
+
+	responseQueueName := fmt.Sprintf("%s%s", getEnvOrDefault("RESPONSE_QUEUE_PREFIX", "response_"), req.UID)
 
 	/* Reconnect as consumer */
 	conn, err = amqp091.Dial(rabbitURL)
@@ -93,11 +97,24 @@ func chatCompletionsHandler(w http.ResponseWriter, r *http.Request) {
 	var chConsumer *amqp091.Channel
 	var msgs <-chan amqp091.Delivery
 	var consumeErr error
-	for i := 0; i < 300; i++ {
+
+	maxRetries := 300
+	if v := getEnvOrDefault("RESPONSE_QUEUE_RETRIES", ""); v != "" {
+		if n, err := strconv.Atoi(v); err == nil && n > 0 {
+			maxRetries = n
+		}
+	}
+	backoff := 250 * time.Millisecond
+	maxBackoff := 30 * time.Second
+
+	for i := 0; i < maxRetries; i++ {
 		if chConsumer == nil || chConsumer.IsClosed() {
 			chConsumer, consumeErr = conn.Channel()
 			if consumeErr != nil {
-				time.Sleep(1 * time.Second)
+				time.Sleep(backoff)
+				if backoff < maxBackoff {
+					backoff *= 2
+				}
 				continue
 			}
 		}
@@ -115,12 +132,18 @@ func chatCompletionsHandler(w http.ResponseWriter, r *http.Request) {
 		}
 		if consumeErr.Error() == "channel/connection is not open" {
 			chConsumer = nil // force reopen
-			time.Sleep(1 * time.Second)
+			time.Sleep(backoff)
+			if backoff < maxBackoff {
+				backoff *= 2
+			}
 			continue
 		}
 		if amqpErr, ok := consumeErr.(*amqp091.Error); ok && amqpErr.Code == 404 {
 			// Queue not found, wait and retry
-			time.Sleep(1 * time.Second)
+			time.Sleep(backoff)
+			if backoff < maxBackoff {
+				backoff *= 2
+			}
 			continue
 		}
 		if consumeErr != nil {
