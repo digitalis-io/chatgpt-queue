@@ -10,15 +10,18 @@ This application acts as a bridge between RabbitMQ and any Large Language Model 
 
 1. **Submit a Query:**
    - A client sends a chat message to a RabbitMQ queue (default: `default-queue`).
-   - The message must be a JSON object with two fields:
-     - `key`: a unique identifier (UUID) for the request.
-     - `message`: the user's chat prompt.
+   - The message must be a JSON object in the following format:
 
    Example:
    ```json
    {
-     "key": "123e4567-e89b-12d3-a456-426614174000",
-     "message": "What is the capital of France?"
+     "model": "gpt-4o",
+     "messages": [
+       { "role": "user", "content": "What is the capital of France?" }
+     ],
+     "stream": true,
+     "username": "alice",
+     "uid": "123e4567-e89b-12d3-a456-426614174000"
    }
    ```
 
