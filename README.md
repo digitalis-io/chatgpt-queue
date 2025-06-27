@@ -124,16 +124,16 @@ export OPENAI_MODEL="llama2"
 
 ## REST API Usage
 
-The application also exposes a REST API compatible with the OpenAI Chat Completions endpoint, and a streaming endpoint for responses.
+The application exposes a REST API compatible with the OpenAI Chat Completions endpoint. When you submit a chat query, the API will stream the response back to you as it becomes available.
 
-### 1. Submit a Chat Query
+### 1. Submit a Chat Query and Stream the Response
 
 Send a POST request to `/v1/chat/completions` with a JSON body. You may include `username` (optional) and `uid` (optional, will be generated if omitted):
 
 ```bash
-curl --location 'http://localhost:8080/v1/chat/completions' \
-  --header 'Content-Type: application/json' \
-  --data '{
+curl --no-buffer -X POST 'http://localhost:8080/v1/chat/completions' \
+  -H 'Content-Type: application/json' \
+  -d '{
     "model": "gpt-4o",
     "messages": [
       { "role": "user", "content": "Tell me a short story about a brave knight." }
@@ -143,19 +143,13 @@ curl --location 'http://localhost:8080/v1/chat/completions' \
   }'
 ```
 
-The response will include the UID assigned to the request. Use this UID to retrieve the response.
+- The response will be streamed as Server-Sent Events (SSE) with `Content-Type: text/event-stream`.
+- Each chunk of the LLM's response will be sent as a new SSE event.
+- You do **not** need to poll or call a separate endpoint to get the answer.
 
-### 2. Stream the Response
+**Tip:** Use `curl --no-buffer` or a compatible HTTP client to see the streamed output in real time.
 
-To receive the streamed response, connect to `/v1/chat/response?uid=<uid>` using Server-Sent Events (SSE):
-
-```bash
-curl -N 'http://localhost:8080/v1/chat/response?uid=<uid>'
-```
-
-Replace `<uid>` with the UID returned from the previous step. Each message chunk will be streamed as an SSE event.
-
-### 3. Health Check
+### 2. Health Check
 
 A simple health check endpoint is available:
 
